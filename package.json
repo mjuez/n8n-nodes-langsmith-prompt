@@ -1,19 +1,19 @@
 {
-  "name": "n8n-nodes-<...>",
+  "name": "n8n-nodes-langsmith-prompt",
   "version": "0.1.0",
-  "description": "",
+  "description": "n8n node to fetch prompts from LangSmith",
   "keywords": [
     "n8n-community-node-package"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/jtracks/n8n-nodes-langsmith-prompt",
   "author": {
-    "name": "",
-    "email": ""
+    "name": "Jonathan Jakobsson",
+    "email": "jtracks@github.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/<...>/n8n-nodes-<...>.git"
+    "url": "https://github.com/jtracks/n8n-nodes-langsmith-prompt.git"
   },
   "engines": {
     "node": ">=20.15"
@@ -33,15 +33,14 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/ExampleCredentialsApi.credentials.js",
-      "dist/credentials/HttpBinApi.credentials.js"
+      "dist/credentials/LangSmithApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ExampleNode/ExampleNode.node.js",
-      "dist/nodes/HttpBin/HttpBin.node.js"
+      "dist/nodes/LangSmithPrompt/LangSmithPrompt.node.js"
     ]
   },
   "devDependencies": {
+    "@types/node": "^24.0.10",
     "@typescript-eslint/parser": "~8.32.0",
     "eslint": "^8.57.0",
     "eslint-plugin-n8n-nodes-base": "^1.16.3",
@@ -50,6 +49,10 @@
     "typescript": "^5.8.2"
   },
   "peerDependencies": {
+    "langsmith": "^0.3.37",
     "n8n-workflow": "*"
+  },
+  "dependencies": {
+    "langchain": "^0.3.29"
   }
 }
