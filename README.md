@@ -2,7 +2,7 @@
 
 # n8n-nodes-langsmith-prompt
 
-This is an n8n community node. It lets you use LangSmith in your n8n workflows.
+This is an n8n community node. It lets you use LangSmith prompt templates in your n8n workflows.
 
 LangSmith is a platform for debugging, testing, evaluating, and monitoring LLM applications, allowing you to manage prompts and track their performance.
 
@@ -21,7 +21,7 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
-- **Fetch and Invoke Prompt**: Fetches a specific prompt from LangSmith by name, invokes it with your custom parameters, and outputs the result using the prompt name as the output key.
+- **Fill Prompt Template**: Fetches a prompt template from LangSmith by name and substitutes parameter values into the template's variable placeholders.
 
 ## Credentials
 
@@ -39,42 +39,63 @@ This node has been tested with n8n version 1.0.0 and later.
 
 1. Add the LangSmith Prompt node to your workflow
 2. Configure the LangSmith API credentials with your API key
-3. Enter the Prompt Name of the prompt you want to fetch from LangSmith
-4. Add Input Parameters to pass to the prompt when invoking it:
+3. Enter the Prompt Name of the prompt template you want to fetch from LangSmith
+4. Add Input Parameters to substitute in the template:
    - Click "Add Parameter" to add key-value pairs
    - For each parameter, provide:
-     - Name: The parameter name required by your prompt
-     - Value: The value to pass for that parameter
-5. The prompt will be invoked with your parameters and the result will be available in the node's output using the prompt name as the key
+     - Name: The parameter name as it appears in the template (e.g., if template contains {question}, use "question")
+     - Value: The value to substitute for that parameter
 
-### Example Input Parameters
+### Example: Template Variable Substitution
 
-If your prompt expects a "question" parameter, add a parameter with:
+If your LangSmith prompt template is:
 
-- Name: question
+```text
+This is your question: "{Question}"
+```
+
+And you add a parameter with:
+
+- Name: Question
 - Value: What is artificial intelligence?
 
-If your prompt expects multiple parameters like "topic" and "tone", add two parameters:
+The filled template output will be:
 
-- Name: topic
-- Value: Machine Learning
+```text
+This is your question: "What is artificial intelligence?"
+```
 
-- Name: tone
-- Value: Professional
+### Working with Multiple Parameters
 
-The node outputs the processed LangSmith prompt using the prompt name as the key. For example, if your prompt name is "my-prompt", the output of the node will be:
+If your template has multiple variables like:
+
+```text
+Hello {Name}, your question about {Topic} is: "{Question}"
+```
+
+Add three parameters:
+
+- Name: Name, Value: John
+- Name: Topic, Value: Machine Learning
+- Name: Question, Value: How do neural networks work?
+
+### Node Output
+
+The node outputs an object with the prompt name as key and the filled prompt content as value:
 
 ```json
 {
-  "my-prompt": "Your processed LangSmith prompt content here"
+  "my-template": "This is your question: \"What is artificial intelligence?\""
 }
 ```
 
-You can then reference this output in subsequent nodes using expressions such as:
+You can reference this output in subsequent nodes using expressions such as:
 
 ```javascript
-{{$node["LangSmith Prompt"].json["my-prompt"]}}
+{{$node["LangSmith Prompt"].json["my-template"]}}
 ```
+
+Where "my-template" is the name of your prompt.
 
 ## Resources
 

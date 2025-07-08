@@ -20,27 +20,5 @@ export class LangSmithApi implements ICredentialType {
 			required: true,
 			description: 'Your LangSmith API Key',
 		},
-		{
-			displayName: 'OpenAI API Key',
-			name: 'openAiApiKey',
-			type: 'string',
-			typeOptions: {
-				password: true,
-			},
-			default: '',
-			required: false,
-			description: 'Your OpenAI API Key',
-		},
-		{
-			displayName: 'Anthropic API Key',
-			name: 'anthropicApiKey',
-			type: 'string',
-			typeOptions: {
-				password: true,
-			},
-			default: '',
-			required: false,
-			description: 'Your Anthropic API Key',
-		},
 	];
 }

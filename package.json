@@ -1,15 +1,19 @@
 {
   "name": "n8n-nodes-langsmith-prompt",
-  "version": "0.3.1",
-  "description": "n8n node to fetch prompts from LangSmith",
+  "version": "0.3.2",
+  "description": "n8n node to use LangSmith prompt templates with variable substitution",
   "keywords": [
-    "n8n-community-node-package"
+    "n8n-community-node-package",
+    "langsmith",
+    "prompt-templates",
+    "variable-substitution",
+    "prompt-engineering"
   ],
   "license": "MIT",
   "homepage": "https://github.com/jtracks/n8n-nodes-langsmith-prompt",
   "author": {
     "name": "Jonathan Jakobsson",
-    "email": "jtracks@github.com"
+    "email": "jonathan.jakobsson2@gmail.com"
   },
   "repository": {
     "type": "git",
