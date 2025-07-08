@@ -1,8 +1,6 @@
 // LangSmithHelper.ts
 // Helper functions for LangSmith prompt fetching and formatting
 
-import * as https from 'https';
-
 export interface PromptParameters {
   [key: string]: string;
 }
@@ -40,27 +38,23 @@ export function invokePromptRaw(promptTemplate: string, params: PromptParameters
 /**
  * Make a GET request and parse JSON response.
  */
-function httpGetJson(url: string, apiKey: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const req = https.request(url, {
+async function httpGetJson(url: string, apiKey: string): Promise<any> {
+  try {
+    // Using n8n's fetch instead of Node.js https module
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'x-api-key': apiKey,
         'Accept': 'application/json',
       },
-    }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(e);
-        }
-      });
     });
     
-    req.on('error', reject);
-    req.end();
-  });
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch data: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
