@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-langsmith-prompt",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "n8n node to use LangSmith prompt templates with variable substitution",
   "keywords": [
     "n8n-community-node-package",
@@ -54,6 +54,5 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
-  },
-  "dependencies": {}
+  }
 }

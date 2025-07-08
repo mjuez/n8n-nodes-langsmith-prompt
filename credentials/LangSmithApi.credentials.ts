@@ -1,6 +1,7 @@
 import {
 	ICredentialType,
 	INodeProperties,
+	ICredentialTestRequest,
 } from 'n8n-workflow';
 
 export class LangSmithApi implements ICredentialType {
@@ -21,4 +22,16 @@ export class LangSmithApi implements ICredentialType {
 			description: 'Your LangSmith API Key',
 		},
 	];
+
+	// This test function will verify that the credentials are valid
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: 'https://api.smith.langchain.com',
+			url: '/api/v1/prompts/',
+			method: 'GET',
+			headers: {
+				'x-api-key': '={{$credentials.langSmithApiKey}}',
+			},
+		},
+	};
 }
