@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-langsmith-prompt",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "n8n node to fetch prompts from LangSmith",
   "keywords": [
     "n8n-community-node-package"
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jtracks/n8n-nodes-langsmith-prompt.git"
+    "url": "git+https://github.com/jtracks/n8n-nodes-langsmith-prompt.git"
   },
   "engines": {
     "node": ">=20.15"
@@ -49,10 +49,7 @@
     "typescript": "^5.8.2"
   },
   "peerDependencies": {
-    "langsmith": "^0.3.37",
     "n8n-workflow": "*"
   },
-  "dependencies": {
-    "langchain": "^0.3.29"
-  }
+  "dependencies": {}
 }

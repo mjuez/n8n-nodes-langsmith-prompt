@@ -1,7 +1,7 @@
 // testLangSmithHelper.ts
 // Simple test script to fetch and invoke a LangSmith prompt using the helper utilities
 
-import { fetchPrompt, invokePrompt, extractPromptValue } from '../nodes/LangSmithPrompt/LangSmithHelper';
+import { fetchPromptTemplateByName, invokePromptRaw } from '../nodes/LangSmithPrompt/LangSmithHelper';
 
 function getEnv(key: string): string | undefined {
   if (process.env[key]) return process.env[key];
@@ -30,13 +30,13 @@ async function main() {
     process.exit(1);
   }
   try {
-    const prompt = await fetchPrompt(promptName, langSmithApiKey);
+    const prompt = await fetchPromptTemplateByName(promptName, langSmithApiKey);
+    console.log('Fetched prompt:', prompt);
     if (!prompt) {
       throw new Error(`Prompt with name "${promptName}" not found`);
     }
     const promptParameters = { Question: 'Hi!' };
-    const formattedPrompt = await invokePrompt(prompt, promptParameters);
-    const finalPrompt = extractPromptValue(formattedPrompt);
+    const finalPrompt = invokePromptRaw(prompt, promptParameters);
     console.log('Prompt output:', finalPrompt);
   } catch (err) {
     console.error('Error:', err);

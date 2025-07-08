@@ -1,53 +1,66 @@
 // LangSmithHelper.ts
 // Helper functions for LangSmith prompt fetching and formatting
 
-import * as process from 'process';
-
-export interface LangSmithApiKeys {
-  langSmithApiKey: string;
-  anthropicApiKey?: string;
-  openAiApiKey?: string;
-}
+import * as https from 'https';
 
 export interface PromptParameters {
   [key: string]: string;
 }
 
-export interface LangSmithPrompt {
-  invoke: (params: PromptParameters) => Promise<any>;
+/**
+ * Fetch a prompt template by name from LangSmith API.
+ */
+export async function fetchPromptTemplateByName(promptName: string, apiKey: string): Promise<string | null> {
+  const url = `https://api.smith.langchain.com/commits/-/${encodeURIComponent(promptName)}/latest`;
+  
+  try {
+    const res = await httpGetJson(url, apiKey);
+    return res?.manifest?.kwargs?.template || null;
+  } catch (error) {
+    console.error('Error fetching prompt template:', error);
+    return null;
+  }
 }
 
-export async function fetchPrompt(promptName: string, apiKey: string): Promise<LangSmithPrompt> {
-  // Use dynamic import so langchain/langsmith is not a direct dependency
-  const { pull } = await import('langchain/hub/node');
-  return pull(promptName, { apiKey, includeModel: false });
+/**
+ * Process a prompt template by replacing variables with their values.
+ * Supports format: "{variable}" or {variable}
+ */
+export function invokePromptRaw(promptTemplate: string, params: PromptParameters): string {
+  let result = promptTemplate;
+  
+  for (const [key, value] of Object.entries(params)) {
+    const regex = new RegExp(`\\{\\s*"?${key}"?\\s*\\}`, 'g');
+    result = result.replace(regex, value);
+  }
+  
+  return result;
 }
 
-export function setApiEnvVars(apiKeys: LangSmithApiKeys): { originalAnthropicApiKey?: string; originalOpenAiApiKey?: string } {
-  const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
-  const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
-  if (apiKeys.anthropicApiKey) process.env.ANTHROPIC_API_KEY = apiKeys.anthropicApiKey;
-  if (apiKeys.openAiApiKey) process.env.OPENAI_API_KEY = apiKeys.openAiApiKey;
-  return { originalAnthropicApiKey, originalOpenAiApiKey };
-}
-
-export function restoreApiEnvVars(original: { originalAnthropicApiKey?: string; originalOpenAiApiKey?: string }) {
-  if (original.originalAnthropicApiKey) process.env.ANTHROPIC_API_KEY = original.originalAnthropicApiKey;
-  else delete process.env.ANTHROPIC_API_KEY;
-  if (original.originalOpenAiApiKey) process.env.OPENAI_API_KEY = original.originalOpenAiApiKey;
-  else delete process.env.OPENAI_API_KEY;
-}
-
-export function extractPromptValue(formattedPrompt: any): string {
-  if (formattedPrompt.kwargs?.value) return formattedPrompt.kwargs.value;
-  if (formattedPrompt.value) return formattedPrompt.value;
-  if (formattedPrompt.lc_kwargs?.value) return formattedPrompt.lc_kwargs.value;
-  if (formattedPrompt.text) return formattedPrompt.text;
-  if (formattedPrompt.content) return formattedPrompt.content;
-  if (typeof formattedPrompt === 'string') return formattedPrompt;
-  return JSON.stringify(formattedPrompt);
-}
-
-export async function invokePrompt(prompt: LangSmithPrompt, promptParameters: PromptParameters): Promise<any> {
-  return prompt.invoke(promptParameters);
+/**
+ * Make a GET request and parse JSON response.
+ */
+function httpGetJson(url: string, apiKey: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, {
+      method: 'GET',
+      headers: {
+        'x-api-key': apiKey,
+        'Accept': 'application/json',
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    
+    req.on('error', reject);
+    req.end();
+  });
 }

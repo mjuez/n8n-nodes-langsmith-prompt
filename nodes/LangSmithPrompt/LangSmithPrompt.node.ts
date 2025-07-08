@@ -6,12 +6,9 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import {
-  fetchPrompt,
-  setApiEnvVars,
-  restoreApiEnvVars,
-  extractPromptValue,
-  LangSmithApiKeys,
-  PromptParameters,
+	fetchPromptTemplateByName,
+	invokePromptRaw,
+	PromptParameters,
 } from './LangSmithHelper';
 
 export class LangSmithPrompt implements INodeType {
@@ -21,8 +18,8 @@ export class LangSmithPrompt implements INodeType {
 		icon: 'file:langsmith.svg',
 		group: ['input'],
 		version: 1,
-		subtitle: '={{$parameter["promptName"]}}',
-		description: 'Fetch a prompt from LangSmith, invoke it with parameters, and output the result',
+		subtitle: '={{$parameter["promptName"] || "LangSmith Prompt"}}',
+		description: 'Fill in a prompt template stored in LangSmith',
 		defaults: {
 			name: 'LangSmith Prompt',
 		},
@@ -35,7 +32,7 @@ export class LangSmithPrompt implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				description: 'The name of the prompt to fetch from LangSmith',
+				description: 'The name of the prompt template in your LangSmith account',
 			},
 			{
 				displayName: 'Input Parameters',
@@ -47,7 +44,7 @@ export class LangSmithPrompt implements INodeType {
 				default: {
 					parameters: [],
 				},
-				description: 'Parameters to pass to the prompt when invoking it',
+				description: 'Parameters to substitute in the prompt template',
 				options: [
 					{
 						name: 'parameters',
@@ -58,7 +55,7 @@ export class LangSmithPrompt implements INodeType {
 								name: 'name',
 								type: 'string',
 								default: '',
-								description: 'Name of the parameter to pass to the prompt',
+								description: 'Parameter name that appears in the template like {name}',
 								required: true,
 							},
 							{
@@ -66,7 +63,7 @@ export class LangSmithPrompt implements INodeType {
 								name: 'value',
 								type: 'string',
 								default: '',
-								description: 'Value of the parameter',
+								description: 'Value to substitute in the template',
 								required: true,
 							},
 						],
@@ -83,55 +80,40 @@ export class LangSmithPrompt implements INodeType {
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
 		try {
+			// Get credentials and parameters
 			const credentials = await this.getCredentials('langSmithApi');
 			const promptName = this.getNodeParameter('promptName', 0) as string;
 			const inputParametersData = this.getNodeParameter('inputParameters.parameters', 0, []) as Array<{ name: string; value: string }>;
+			
+			// Build parameters object
 			const promptParameters: PromptParameters = {};
 			for (const param of inputParametersData) {
 				promptParameters[param.name] = param.value;
 			}
-			if (Object.keys(promptParameters).length === 0) {
-				promptParameters.question = 'Hi!';
-			}
-			const apiKeys: LangSmithApiKeys = {
-				langSmithApiKey: credentials.langSmithApiKey as string,
-				anthropicApiKey: credentials.anthropicApiKey as string,
-				openAiApiKey: credentials.openAiApiKey as string,
-			};
-			const prompt = await fetchPrompt(promptName, apiKeys.langSmithApiKey);
-			if (!prompt) {
+			
+			// Fetch prompt template
+			const langSmithApiKey = credentials.langSmithApiKey as string;
+			const promptTemplate = await fetchPromptTemplateByName(promptName, langSmithApiKey);
+			if (!promptTemplate) {
 				throw new NodeOperationError(this.getNode(), `Prompt with name "${promptName}" not found`);
 			}
-			const originalEnv = setApiEnvVars(apiKeys);
-			try {
-				const formattedPrompt = await prompt.invoke(promptParameters);
-				if (!formattedPrompt) {
-					throw new NodeOperationError(this.getNode(), `Failed to format prompt "${promptName}". Please check the prompt configuration.`);
-				}
-				const finalPrompt = extractPromptValue(formattedPrompt);
-				returnData.push({
-					json: { [promptName]: finalPrompt },
-					pairedItem: { item: 0 },
-				});
-			} finally {
-				restoreApiEnvVars(originalEnv);
-			}
+			
+			// Process template with parameters
+			const finalPrompt = invokePromptRaw(promptTemplate, promptParameters);
+			
+			// Return result
+			returnData.push({
+				json: { 
+					[promptName]: finalPrompt 
+				},
+			});
+			
+			return [returnData];
 		} catch (error) {
-			if (this.continueOnFail()) {
-				for (let i = 0; i < items.length; i++) {
-					returnData.push({
-						json: { error: error.message },
-						pairedItem: { item: i },
-					});
-				}
-			} else {
-				throw new NodeOperationError(this.getNode(), error);
-			}
+			throw new NodeOperationError(this.getNode(), error);
 		}
-		return [returnData];
 	}
 }
