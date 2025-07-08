@@ -5,9 +5,14 @@ import type {
 	INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
-
-import { pull } from 'langchain/hub/node';
-import * as process from 'process';
+import {
+  fetchPrompt,
+  setApiEnvVars,
+  restoreApiEnvVars,
+  extractPromptValue,
+  LangSmithApiKeys,
+  PromptParameters,
+} from './LangSmithHelper';
 
 export class LangSmithPrompt implements INodeType {
 	description: INodeTypeDescription = {
@@ -83,139 +88,50 @@ export class LangSmithPrompt implements INodeType {
 
 		try {
 			const credentials = await this.getCredentials('langSmithApi');
-
-			// Get parameters
 			const promptName = this.getNodeParameter('promptName', 0) as string;
-			
-			// Get input parameters for the prompt
-			const inputParametersData = this.getNodeParameter('inputParameters.parameters', 0, []) as Array<{
-				name: string;
-				value: string;
-			}>;
-			
-			// Convert input parameters to an object for prompt invocation
-			const promptParameters: Record<string, string> = {};
+			const inputParametersData = this.getNodeParameter('inputParameters.parameters', 0, []) as Array<{ name: string; value: string }>;
+			const promptParameters: PromptParameters = {};
 			for (const param of inputParametersData) {
 				promptParameters[param.name] = param.value;
 			}
-			
-			// Set default 'question' parameter if none provided
 			if (Object.keys(promptParameters).length === 0) {
 				promptParameters.question = 'Hi!';
 			}
-
-			// Create an object with the necessary API keys
-			const apiKeys = {
+			const apiKeys: LangSmithApiKeys = {
 				langSmithApiKey: credentials.langSmithApiKey as string,
 				anthropicApiKey: credentials.anthropicApiKey as string,
 				openAiApiKey: credentials.openAiApiKey as string,
 			};
-
-			// Fetch the prompt by name
-			const prompt = await pull(promptName, {
-				apiKey: apiKeys.langSmithApiKey,
-				includeModel: false,
-			});
-
+			const prompt = await fetchPrompt(promptName, apiKeys.langSmithApiKey);
 			if (!prompt) {
-				throw new NodeOperationError(
-					this.getNode(),
-					`Prompt with name "${promptName}" not found`,
-				);
+				throw new NodeOperationError(this.getNode(), `Prompt with name "${promptName}" not found`);
 			}
-
-			const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
-			const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
-
-			if (apiKeys.anthropicApiKey) {
-				process.env.ANTHROPIC_API_KEY = apiKeys.anthropicApiKey;
-			}
-
-			if (apiKeys.openAiApiKey) {
-				process.env.OPENAI_API_KEY = apiKeys.openAiApiKey;
-			}
-
+			const originalEnv = setApiEnvVars(apiKeys);
 			try {
-				// Invoke the prompt with the provided parameters
 				const formattedPrompt = await prompt.invoke(promptParameters);
-
-                if (!formattedPrompt) {
-                    throw new NodeOperationError(
-                        this.getNode(),
-                        `Failed to format prompt "${promptName}". Please check the prompt configuration.`,
-                    );
-                }
-
-                // Extract the prompt value from various possible locations
-                let finalPrompt = null;
-				
-				// First check standard property
-				if (formattedPrompt.kwargs?.value) {
-					finalPrompt = formattedPrompt.kwargs.value;
-				} 
-				// Check direct value property
-				else if (formattedPrompt.value) {
-					finalPrompt = formattedPrompt.value;
-				} 
-				// Check LangChain format
-				else if (formattedPrompt.lc_kwargs?.value) {
-					finalPrompt = formattedPrompt.lc_kwargs.value;
+				if (!formattedPrompt) {
+					throw new NodeOperationError(this.getNode(), `Failed to format prompt "${promptName}". Please check the prompt configuration.`);
 				}
-				// Check other possible properties
-				else if (formattedPrompt.text) {
-					finalPrompt = formattedPrompt.text;
-				}
-				else if (formattedPrompt.content) {
-					finalPrompt = formattedPrompt.content;
-				}
-				// Last resort - stringify the object
-				else if (typeof formattedPrompt === 'string') {
-					finalPrompt = formattedPrompt;
-				}
-				else {
-					finalPrompt = JSON.stringify(formattedPrompt);
-				}
-
-                // Output the prompt with the prompt name as the key
-                returnData.push({
-                    json: {
-                        [promptName]: finalPrompt,
-                    },
-                    pairedItem: { item: 0 },
-                });
-
+				const finalPrompt = extractPromptValue(formattedPrompt);
+				returnData.push({
+					json: { [promptName]: finalPrompt },
+					pairedItem: { item: 0 },
+				});
 			} finally {
-				// Restore original environment variables
-				if (originalAnthropicApiKey) {
-					process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
-				} else {
-					delete process.env.ANTHROPIC_API_KEY;
-				}
-
-				if (originalOpenAiApiKey) {
-					process.env.OPENAI_API_KEY = originalOpenAiApiKey;
-				} else {
-					delete process.env.OPENAI_API_KEY;
-				}
+				restoreApiEnvVars(originalEnv);
 			}
 		} catch (error) {
 			if (this.continueOnFail()) {
-				// Add error to all items
 				for (let i = 0; i < items.length; i++) {
 					returnData.push({
-						json: {
-							error: error.message,
-						},
-						pairedItem: {
-							item: i,
-						},
+						json: { error: error.message },
+						pairedItem: { item: i },
 					});
 				}
 			} else {
 				throw new NodeOperationError(this.getNode(), error);
 			}
 		}
-
 		return [returnData];
 	}
 }
