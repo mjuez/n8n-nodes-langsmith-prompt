@@ -87,30 +87,31 @@ export class LangSmithPrompt implements INodeType {
 			const credentials = await this.getCredentials('langSmithApi');
 			const promptName = this.getNodeParameter('promptName', 0) as string;
 			const inputParametersData = this.getNodeParameter('inputParameters.parameters', 0, []) as Array<{ name: string; value: string }>;
-			
+
 			// Build parameters object
 			const promptParameters: PromptParameters = {};
 			for (const param of inputParametersData) {
 				promptParameters[param.name] = param.value;
 			}
-			
+
 			// Fetch prompt template
 			const langSmithApiKey = credentials.langSmithApiKey as string;
-			const promptTemplate = await fetchPromptTemplateByName(promptName, langSmithApiKey);
+			const region = credentials.region as string;
+			const promptTemplate = await fetchPromptTemplateByName(promptName, langSmithApiKey, region);
 			if (!promptTemplate) {
 				throw new NodeOperationError(this.getNode(), `Prompt with name "${promptName}" not found`);
 			}
-			
+
 			// Process template with parameters
 			const finalPrompt = invokePromptRaw(promptTemplate, promptParameters);
-			
+
 			// Return result
 			returnData.push({
-				json: { 
-					[promptName]: finalPrompt 
+				json: {
+					[promptName]: finalPrompt
 				},
 			});
-			
+
 			return [returnData];
 		} catch (error) {
 			throw new NodeOperationError(this.getNode(), error);

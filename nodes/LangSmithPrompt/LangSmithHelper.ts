@@ -8,9 +8,10 @@ export interface PromptParameters {
 /**
  * Fetch a prompt template by name from LangSmith API.
  */
-export async function fetchPromptTemplateByName(promptName: string, apiKey: string): Promise<string | null> {
-  const url = `https://api.smith.langchain.com/commits/-/${encodeURIComponent(promptName)}/latest`;
-  
+export async function fetchPromptTemplateByName(promptName: string, apiKey: string, region: string = 'us'): Promise<string | null> {
+  const baseUrl = region === 'eu' ? 'https://eu.api.smith.langchain.com' : 'https://api.smith.langchain.com';
+  const url = `${baseUrl}/commits/-/${encodeURIComponent(promptName)}/latest`;
+
   try {
     const res = await httpGetJson(url, apiKey);
     return res?.manifest?.kwargs?.template || null;
@@ -26,12 +27,12 @@ export async function fetchPromptTemplateByName(promptName: string, apiKey: stri
  */
 export function invokePromptRaw(promptTemplate: string, params: PromptParameters): string {
   let result = promptTemplate;
-  
+
   for (const [key, value] of Object.entries(params)) {
     const regex = new RegExp(`\\{\\s*"?${key}"?\\s*\\}`, 'g');
     result = result.replace(regex, value);
   }
-  
+
   return result;
 }
 
@@ -48,11 +49,11 @@ async function httpGetJson(url: string, apiKey: string): Promise<any> {
         'Accept': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     throw new Error(`Failed to fetch data: ${error instanceof Error ? error.message : String(error)}`);

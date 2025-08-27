@@ -30,7 +30,7 @@ async function main() {
     process.exit(1);
   }
   try {
-    const prompt = await fetchPromptTemplateByName(promptName, langSmithApiKey);
+    const prompt = await fetchPromptTemplateByName(promptName, langSmithApiKey, 'us');
     console.log('Fetched prompt:', prompt);
     if (!prompt) {
       throw new Error(`Prompt with name "${promptName}" not found`);

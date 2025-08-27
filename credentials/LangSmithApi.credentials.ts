@@ -11,6 +11,26 @@ export class LangSmithApi implements ICredentialType {
 
 	properties: INodeProperties[] = [
 		{
+			displayName: 'Region',
+			name: 'region',
+			type: 'options',
+			options: [
+				{
+					name: 'US',
+					value: 'us',
+					description: 'United States (api.smith.langchain.com)',
+				},
+				{
+					name: 'EU',
+					value: 'eu',
+					description: 'Europe (eu.api.smith.langchain.com)',
+				},
+			],
+			default: 'us',
+			required: true,
+			description: 'Select the LangSmith API region',
+		},
+		{
 			displayName: 'LangSmith API Key',
 			name: 'langSmithApiKey',
 			type: 'string',
@@ -26,7 +46,7 @@ export class LangSmithApi implements ICredentialType {
 	// This test function will verify that the credentials are valid
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://api.smith.langchain.com',
+			baseURL: '={{$credentials.region === "eu" ? "https://eu.api.smith.langchain.com" : "https://api.smith.langchain.com"}}',
 			url: '/api/v1/prompts/',
 			method: 'GET',
 			headers: {
